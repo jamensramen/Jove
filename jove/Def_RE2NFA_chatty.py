@@ -94,13 +94,18 @@ precedence = (
 
 def p_expression_plus(t):
     '''expression : expression PLUS catexp'''
-    print("Got a plus token")
+    print("Found a plus token")
     t[0] = mk_plus_nfa(t[1], t[3]) # Union of the two NFAs is returned
     
 def mk_plus_nfa(N1, N2):
     """Given two NFAs, return their union.
     """
-    print("Given the parse of two NFA, making one PLUS-connected NFA")
+    print('Given the parse of two NFA with transitioning states:')
+    print('\t' + str(N1["Delta"]))
+    print('\tand')
+    print('\t' + str(N2["Delta"]))
+    print('Making one PLUS-connected NFA')
+
     delta_accum = dict({})
     delta_accum.update(N1["Delta"])
     delta_accum.update(N2["Delta"]) # Simply accumulate the transitions
@@ -116,16 +121,24 @@ def mk_plus_nfa(N1, N2):
     
 def p_expression_plus_id(t):
     '''expression : catexp'''
-    # Simply inherit the attribute from t[1] and pass on    
+    # Simply inherit the attribute from t[1] and pass on
+    print('Found the end of an expression (may or may not result in the final NFA)')    
     t[0] = t[1] 
 
 #-- * The C -> C O production
 
 def p_expression_cat(t):
     '''catexp :  catexp ordyexp'''
+    print('Found two expressions to concatenate')
     t[0] = mk_cat_nfa(t[1], t[2])
 
 def mk_cat_nfa(N1, N2):
+    print('Given the parse of two NFA with transitioning states:')
+    print('\t' + str(N1["Delta"]))
+    print('\tand')
+    print('\t' + str(N2["Delta"])) 
+    print('Making one concatenated NFA')
+
     delta_accum = dict({}) 
     delta_accum.update(N1["Delta"])
     delta_accum.update(N2["Delta"])
@@ -161,6 +174,7 @@ def p_expression_cat_id(t):
 
 def p_expression_ordy_star(t):
     'ordyexp : ordyexp STAR'
+    print('Found a star token')
     t[0] = mk_star_nfa(t[1])
 
 def mk_star_nfa(N):
@@ -171,6 +185,8 @@ def mk_star_nfa(N):
     # 3) Make N[F] non-final
     # 4) Spin back from every state in N[F] to Q0
     #
+    
+    print('Given the parse of one NFA, making one STAR-ed NFA')
     delta_accum = dict({})
     IF = NxtStateStr()
     Q0 = set({ IF }) # new set of start + final states
@@ -197,6 +213,9 @@ def mk_star_nfa(N):
 
 def p_expression_ordy_paren(t):
     'ordyexp : LPAREN expression RPAREN'
+    print('Found RPAREN token for LPAREN token - create new combined expression in parentheses with transitioning states:')
+    print('\t' + str(t[2]["Delta"]))
+    print('to final expression')
     # Simply inherit the attribute from t[2] and pass on
     t[0] = t[2]
 
@@ -204,11 +223,13 @@ def p_expression_ordy_paren(t):
     
 def p_expression_ordy_eps(t):
     'ordyexp : EPS'
+    print('Found epsilon symbol')
     t[0] = mk_eps_nfa()
 
 def mk_eps_nfa():
     """An nfa with exactly one start+final state
     """
+    print('Making an NFA for symbol \'\'')
     Q0 = set({ NxtStateStr() })
     F  = Q0
     return mk_nfa(Q     = Q0, 
@@ -221,11 +242,13 @@ def mk_eps_nfa():
 
 def p_expression_ordy_str(t):
     'ordyexp : STR'
+    print('Found symbol ' + t[1])
     t[0] = mk_symbol_nfa(t[1])
 
 def mk_symbol_nfa(a):
     """The NFA for a single re letter
     """
+    print('Making an NFA for found symbol ' + a)
     # Make a fresh initial state
     q0 = NxtStateStr()
     Q0 = set({ q0 })

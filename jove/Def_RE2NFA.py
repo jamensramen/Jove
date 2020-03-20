@@ -6,18 +6,18 @@
 # In this module, we will cover regular expressions by showing how they can be converted to NFA. The scanner and parser for RE to convert them to NFA are the main part of this module.
 # 
 
-# In[ ]:
+# In[1]:
 
 from jove.Def_NFA import mk_nfa
-from lex                 import lex
-from yacc                import yacc
+from lex          import lex
+from yacc         import yacc
 from jove.StateNameSanitizers import ResetStNum, NxtStateStr
 
 
 # # Parsing regular expressions : ReParse
 # 
 
-# In[ ]:
+# In[2]:
 
 # -----------------------------------------------------------------------------
 # reparseNEW.py
@@ -59,6 +59,7 @@ t_ignore = " \t"
 #-- Upon new lines, increase the lexer's line count variable
 def t_newline(t):
     r'\n+'
+    print("getting newline")
     t.lexer.lineno += t.value.count("\n")
 
 #-- Lexer's error announcer for illegal characters
@@ -93,11 +94,13 @@ precedence = (
 
 def p_expression_plus(t):
     '''expression : expression PLUS catexp'''
+    print("Found a plus token")
     t[0] = mk_plus_nfa(t[1], t[3]) # Union of the two NFAs is returned
     
 def mk_plus_nfa(N1, N2):
     """Given two NFAs, return their union.
     """
+    print("Given the parse of two NFA, making one PLUS-connected NFA")
     delta_accum = dict({})
     delta_accum.update(N1["Delta"])
     delta_accum.update(N2["Delta"]) # Simply accumulate the transitions
@@ -158,6 +161,7 @@ def p_expression_cat_id(t):
 
 def p_expression_ordy_star(t):
     'ordyexp : ordyexp STAR'
+    print('Found a star token')
     t[0] = mk_star_nfa(t[1])
 
 def mk_star_nfa(N):
@@ -168,6 +172,8 @@ def mk_star_nfa(N):
     # 3) Make N[F] non-final
     # 4) Spin back from every state in N[F] to Q0
     #
+    print('Given the parse of two NFA\'s, making one STAR-connected NFA')
+    
     delta_accum = dict({})
     IF = NxtStateStr()
     Q0 = set({ IF }) # new set of start + final states
@@ -194,6 +200,7 @@ def mk_star_nfa(N):
 
 def p_expression_ordy_paren(t):
     'ordyexp : LPAREN expression RPAREN'
+    print('Found LPAREN token')
     # Simply inherit the attribute from t[2] and pass on
     t[0] = t[2]
 
@@ -201,6 +208,7 @@ def p_expression_ordy_paren(t):
     
 def p_expression_ordy_eps(t):
     'ordyexp : EPS'
+    print('Making an NFA for symbol \'' + t + '\'')
     t[0] = mk_eps_nfa()
 
 def mk_eps_nfa():
@@ -218,11 +226,13 @@ def mk_eps_nfa():
 
 def p_expression_ordy_str(t):
     'ordyexp : STR'
+    print('Found symbol ' + t[1])
     t[0] = mk_symbol_nfa(t[1])
 
 def mk_symbol_nfa(a):
     """The NFA for a single re letter
     """
+    print('Making an NFA for found symbol ' + a)
     # Make a fresh initial state
     q0 = NxtStateStr()
     Q0 = set({ q0 })
@@ -247,7 +257,7 @@ def p_error(t):
 
 # ## RE to NFA code
 
-# In[ ]:
+# In[3]:
 
 def re2nfa(s, stno = 0):
     """Given a string s representing an RE and an optional
@@ -269,7 +279,7 @@ def re2nfa(s, stno = 0):
     return myparsednfa
 
 
-# In[ ]:
+# In[4]:
 
 print('''You may use any of these help commands:
 help(re2nfa)

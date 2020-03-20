@@ -289,6 +289,9 @@ def form_delta(line_attr_list, mc_type):
             by keeping a dict entry for (I, a, b), and extending that.
     """
     rslt_dict = dict({ })
+
+    print('Forming Delta appropriate to machine type ' + mc_type + '...')
+
     #--
     for attr in line_attr_list:
         from_states = attr["FromState"]
@@ -339,13 +342,15 @@ def form_delta(line_attr_list, mc_type):
         for zl_nxtst in l_zl_nxtst:
             if mc_type=='DFA':
                 # Prevent nondeterminism
+                print('\tChecking DFA transition table key/value pairs for nondeterministic behavior...')
                 (inpsym, nxtst) = zl_nxtst
                 rslt_dict = extend_rsltdict(rslt_dict,
                                             (from_state, inpsym),
                                             nxtst,
                                             Extend=False)
             elif mc_type=='NFA':
-                # Allow nondeterminism                
+                # Allow nondeterminism
+                print('\tExtending NFA transition table key/value pairs to allow nondeterministic behavior...')                
                 (inpsym, nxtst) = zl_nxtst
                 rslt_dict = extend_rsltdict(rslt_dict,
                                             (from_state, inpsym),
@@ -353,6 +358,7 @@ def form_delta(line_attr_list, mc_type):
                                             Extend=True)
             elif mc_type=='PDA':
                 # Allow nondeterminism
+                print('\tExtending PDA transition table key/value pairs to allow nondeterministic behavior...')
                 ((inpsym, stkpop, stkpush), nxtst) = zl_nxtst
                 rslt_dict = extend_rsltdict(rslt_dict,
                                             (from_state, inpsym, stkpop),
@@ -395,6 +401,13 @@ def get_machine_components(line_attr_list, mc_type):
     # some of the lists formed here. We use list(set(L)) as we don't care
     # about the order of many of these lists.
     #
+
+    print('\tExtracting Q by unioning FromState and ToStates')
+    print('\tExtracting Gamma by unioning GammaIn symbols and GammaOut strings')
+    print('\tExtracting Q0 by unioning all Q0')
+    print('\tExtracting F by unioning all F')
+    print('\tExtracting Sigma by unioning all SigmaEps sets, removing Eps')
+
     From_s = union_line_attr_list_fld(line_attr_list, 
                                       "FromState", mc_type)
     To_s   = union_line_attr_list_fld(line_attr_list, 
@@ -460,7 +473,7 @@ def is_fin_st(id):
 
 def p_you_are_hosed(t):
     '''md : error'''
-    print("Your are hosed due to a syntax error!")
+    print("You are hosed due to a syntax error!")
     global LINENO
     LINENO = -1 # restore sanity wrt future reporting of errors
     t[0] = ('ERROR', 'ERROR')
@@ -477,6 +490,8 @@ def p_dfa_md(t):
     ),"Error: DFA with " +str(len(Q0))+ " starting states is illegal."
     global LINENO
     LINENO = -1 # restore for next error processing
+
+    print('Formed finalized DFA with Delta: ' + str(mc[len(mc) - 1]))
     t[0] = ('DFA', mc)
     
 def p_nfa_md(t):
@@ -487,6 +502,7 @@ def p_nfa_md(t):
 
 def p_pda_md(t):
     '''md : PDA lines'''
+    print('Parsed PDA keyword')
     mc = get_machine_components(t[2], 'PDA')
     (From_s, To_s,
      G_in,   G_out,
@@ -495,6 +511,8 @@ def p_pda_md(t):
     assert(len(Q0) == 1),"PDA with more than one starting state illegal."    
     global LINENO
     LINENO = -1 # restore for next error processing
+
+    print('Formed finalized PDA with delta: ' + str(mc[len(mc) - 1]))
     t[0] = ('PDA', mc)
     
 def p_tm_md(t):
@@ -521,6 +539,7 @@ def p_lines2(t):
     '''lines : one_line lines'''
     one_line_attr = [ t[1] ]
     lines_attr    = t[2]
+
     t[0] = one_line_attr + lines_attr # List of line attrs
 
 def p_one_line(t):
@@ -540,10 +559,12 @@ def p_one_line(t):
     lineattr["GammaOut"]  = t[3]["GammaOut"]
     lineattr["HeadDirn"]  = t[3]["HeadDirn"]    
     #
+
     t[0] = lineattr
 
 def p_state(t):
     '''state : ID'''
+    print('Observing state [\'' + str(t[1]) + '\']...')
     t[0] = [ t[1] ]
 
 def p_states1(t):
@@ -552,6 +573,7 @@ def p_states1(t):
     
 def p_states2(t):
     '''states : state COMMA states'''
+    print('Observing state ' + str(t[1]) + 'ANDed with states following comma...')
     t[0] = t[1] + t[3]
 
 def p_labels1(t):
@@ -569,6 +591,7 @@ def p_labels2(t):
     lineattr.update({ "GammaIn" : L1["GammaIn"]  + Ls["GammaIn"]  })
     lineattr.update({ "GammaOut": L1["GammaOut"] + Ls["GammaOut"] })
     lineattr.update({ "HeadDirn": L1["HeadDirn"] + Ls["HeadDirn"] })
+    print('\tCombining rules, which were operands of an OR operator')
     t[0] = lineattr
 
 # One label is a big deal. It deals with labels for DFA, NFA, PDA, or TM
@@ -590,7 +613,12 @@ def p_ID_or_EPS_or_B(t):
     elif id=="''":
         id = ''
     #--
-    print("Got one label of a DFA, which is an ID, that being", id)
+
+    if id == '':
+        print('\tGot one label: \'\'')
+    else:
+        print('\tGot one label: ' + id)
+
     lineattr = default_line_attr()
     lineattr.update({ "SigmaEps" : [ id ] })
     t[0] = lineattr
@@ -607,6 +635,12 @@ def p_one_label2(t):
     # GammaIn coming in via t[3], and
     # GammaOut coming in via t[5].
     #
+
+    print('\tGot one rule of a CFG, which gets:')
+    print('\t\t' + str(t[1]["SigmaEps"]) + ' as an input, pops:')
+    print('\t\t' + str(t[3]["SigmaEps"]) + ' off of the stack, and pushes:')
+    print('\t\t' + str(t[5]["SigmaEps"]) + ' onto the stack')
+
     lineattr = t[1]
     lineattr.update({ "GammaIn" : t[3]["SigmaEps"]  })
     lineattr.update({ "GammaOut": t[5]["SigmaEps"] })
